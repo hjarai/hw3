@@ -34,21 +34,45 @@ UNK_TOKEN = Token(token_id=-1, word=UNK, pos=UNK, head=-1, dep=UNK)
 class Sentence:
 
     def __init__(self, tokens):
-        self.root = Token(token_id=0, word=ROOT, pos=ROOT, head=-1, dep=ROOT)
-        self.tokens = None
-        self.stack = None
-        self.buffer = None
-        self.arcs = None
+        self.root = ROOT_TOKEN
+        self.tokens = tokens
+        self.stack = [ROOT_TOKEN]
+        self.buffer = tokens
+        arcs = []
+        for token in tokens:
+            pair = [int(token.token_id), int(token.head)]
+            pair.sort()
+            arcs.append(pair)
+        arcs.sort(key=lambda x: x[0])
+        self.arcs = arcs
         self.predicted_arcs = None
 
     def is_projective(self):
         """ determines if sentence is projective when ground truth given """
-        pass
+        for pair in self.arcs:
+            for compare_pair in self.arcs:
+                if pair != compare_pair:
+                    #starts within the two and ends outide of the two (after the compare_pair[1])
+                    if pair[0] > compare_pair[0] and pair[0]<compare_pair[1] and pair[1]>compare_pair[1]:
+                        return False
+        return True
 
 
     def get_trans(self):  # this function is only used for the ground truth
         """ decide transition operation from [shift, left_arc, or right_arc] """
-        pass
+        #there are enough things on the stack
+        def no_dependents(buffer, parent_index):
+            return not (parent_index in [word.head for word in buffer])
+        stack = self.stack
+        if len(stack)>=2:
+            if stack[-2].head == stack[-1].token_id:
+                return "LEFT" #+stack[-1].dep
+            elif (stack[-1].head == stack[-2].token_id and no_dependents(self.buffer, stack[-1].token_id)):
+                return "RIGHT"
+            else:
+                return "SHIFT"
+        else:
+            return "SHIFT"
 
 
     def check_trans(self, potential_trans):
@@ -58,8 +82,15 @@ class Sentence:
     
     def update_state(self, curr_trans, predicted_dep=None):
         """ updates the sentence according to the given transition (may or may not assume legality, you implement) """
-        pass
-
+        # shift, left, right
+        if curr_trans == "LEFT":
+            self.stack[-1].lc.append(self.stack[-2])
+            del self.stack[-2]
+        elif curr_trans =="RIGHT":
+            self.stack[-2].rc.append(self.stack[-1])
+            del self.stack[-1]
+        else:
+            self.stack.append(self.buffer.pop(0))
 
 
 class FeatureGenerator:

@@ -34,12 +34,12 @@ for sentence in tqdm(by_sentences):
         # print(sentence)
     # sentences_list.append(sentence)
 
-
-while this_sentence.buffer != []:
+# termination buffer is empty and stack is just root
+while not (this_sentence.buffer == [] and len(this_sentence.stack) == 1):
     curr_trans = this_sentence.get_trans()
+    print(curr_trans)
     this_sentence.update_state(curr_trans)
-    breakpoint()
-
+    print([token.word for token in this_sentence.stack], [token.word for token in this_sentence.buffer])
 
 # %%
 

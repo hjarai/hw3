@@ -7,7 +7,7 @@ should be described in the README
 import itertools
 from data_utils import Token, Sentence 
 from tqdm import tqdm
-
+import json
 file = "train.orig.conll"
 
 with open(file, 'r', encoding='utf-8') as file:
@@ -15,61 +15,47 @@ with open(file, 'r', encoding='utf-8') as file:
     data_split = [line.strip().split() for line in data]
     by_sentences = [list(y) for x, y in itertools.groupby(data_split, lambda z: z == []) if not x]
 
-
-sentences_list = []
 vocab = {}
 word_count = 0
+labels = set()
+def build_vocab(word):
+    global word_count
+    if word not in vocab:
+        vocab[word] = word_count
+        word_count+=1
+
+[build_vocab(word) for word in ['<root>', '<null>', '<unk>', 'None', 'POSNone', 'DEPNone']]
+
+sentence_features = []
+cooounter = 0
 for sentence in tqdm(by_sentences):
     tokens_list = []
     for word in sentence:
         tokens_list.append(Token(token_id=word[0], word=word[2], pos=word[4], head=word[6], dep=word[7]))
-        #build vocab
-        if word[2] not in vocab:
-            vocab[word[2]] = word_count
-            word_count+=1
+        [build_vocab(word) for word in [word[2], word[4], word[7]]]
     this_sentence = Sentence(tokens_list)
-    continue
-    if not sentence.is_projective():
+    if not this_sentence.is_projective():
         continue
-        # print(sentence)
-    # sentences_list.append(sentence)
-
-# termination buffer is empty and stack is just root
-while not (this_sentence.buffer == [] and len(this_sentence.stack) == 1):
-    curr_trans = this_sentence.get_trans()
-    print(curr_trans)
-    this_sentence.update_state(curr_trans)
-    print([token.word for token in this_sentence.stack], [token.word for token in this_sentence.buffer])
-
-# %%
-
-# class parse_sent():
-# class parse_sent():
-#     def __init__(self, sentence): 
-#         self.tokens = sentence
-#         self.buffer = sentence
-#         self.stack = []
-#         pass
-        
-#     def one_step(self):
-
-#         pass
-#     def get_features(self):
-#         #18 things?
-#         # the first three words on the stack and the buffer (and their POS tags) (12 features)
-# # • the words, POS tags, and arc labels of the first and second leftmost and rightmost children
-# # of the first two words on the stack, (24 features)
-# # • the words, POS tags, and arc labels of leftmost child of the leftmost child and rightmost child
-# # of rightmost child of the first two words of the stack (12 features)
-#         pass
-#     def get_transitions(self):
-#         #left/right/shift
-#         pass
-#     def write_out(self, out_path):
-#         pass
-
-# class token():
-#     def __init__(word):
+    counter = 0
+    cooounter+=1
+    while not (this_sentence.buffer == [] and len(this_sentence.stack) == 1):
+        features = this_sentence.get_features()
+        curr_trans = this_sentence.get_trans()
+        labels.add(curr_trans)
+        sentence_features.append(features+[curr_trans])
+        counter +=1
+        this_sentence.update_state(curr_trans)  
 
 
+with open('train.converted', 'w', encoding='utf-8') as out_file:
+    for features in sentence_features:
+        out_file.write(' '.join(features)+'\n')
+
+with open('vocab.json', 'w') as out_file:
+    vocab['LABEL_LIST'] = list(labels)
+    json.dump(vocab, out_file)
+
+print(len(vocab))
+print(len(labels))
+print(vocab['LABEL_LIST'])
 

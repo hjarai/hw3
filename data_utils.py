@@ -1,12 +1,8 @@
-import numpy as np
-
-
 P_PREFIX = '<p>'
 L_PREFIX = '<l>'
 ROOT = '<root>'
 NULL = '<null>'
 UNK = '<unk>'
-
 
 class Token:
 
@@ -77,14 +73,28 @@ class Sentence:
 
     def check_trans(self, potential_trans):
         """ checks if transition can legally be performed"""
-        pass
-    
-    
+        not_allowed = []
+        if self.buffer == []:
+            not_allowed.append("SHIFT")
+        if len(self.stack) <= 2:
+            not_allowed.append("LEFT")
+        if len(self.stack) <=1:
+            not_allowed.append("RIGHT")
+
+        return potential_trans.split("-")[0] in not_allowed
+
+
+    def predict_trans(self):
+        """ predict transition operation from legal [shift, left_arc, or right_arc] """
+
+
+
     def update_state(self, curr_trans, predicted_dep=None):
         """ updates the sentence according to the given transition (may or may not assume legality, you implement) """
         # shift, left, right
         if "LEFT" in curr_trans: #LEFT-nmod 
             self.stack[-1].lc.append(self.stack[-2])
+            #add things to sentence arcs and head
             del self.stack[-2]
         elif "RIGHT" in curr_trans:
             self.stack[-2].rc.append(self.stack[-1])

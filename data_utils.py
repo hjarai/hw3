@@ -10,7 +10,7 @@ class Token:
         self.token_id = int(token_id)
         self.word = word
         self.pos = pos
-        self.head = int(head)
+        self.head = '-' if head == '-' else int(head)
         self.dep = dep
         self.predicted_head = -1
         self.predicted_dep = '<null>'
@@ -41,7 +41,7 @@ class Sentence:
             arcs.append(pair)
         arcs.sort(key=lambda x: x[0])
         self.arcs = arcs
-        self.predicted_arcs = None
+        self.predicted_arcs = {}
 
     def is_projective(self):
         """ determines if sentence is projective when ground truth given """
@@ -70,8 +70,14 @@ class Sentence:
         else:
             return "SHIFT"
 
+    def format_prediction(self, pred_trans):
+        if pred_trans == "SHIFT":
+            return ["SHIFT", None]
+        else:
+            return pred_trans.split("-")
 
-    def check_trans(self, potential_trans):
+
+    def check_trans(self, potential_trans=None):
         """ checks if transition can legally be performed"""
         not_allowed = []
         if self.buffer == []:
@@ -80,29 +86,37 @@ class Sentence:
             not_allowed.append("LEFT")
         if len(self.stack) <=1:
             not_allowed.append("RIGHT")
+        #the way Elon imagined it but makes little sense to me
+        # return potential_trans.split("-")[0] in not_allowed
 
-        return potential_trans.split("-")[0] in not_allowed
-
-
-    def predict_trans(self):
-        """ predict transition operation from legal [shift, left_arc, or right_arc] """
-
+        return not_allowed
 
 
     def update_state(self, curr_trans, predicted_dep=None):
-        """ updates the sentence according to the given transition (may or may not assume legality, you implement) """
+        """ updates the sentence according to the given transition (assumes legality) """
         # shift, left, right
-        if "LEFT" in curr_trans: #LEFT-nmod 
+        if curr_trans =="LEFT": 
             self.stack[-1].lc.append(self.stack[-2])
-            #add things to sentence arcs and head
+            if predicted_dep!=None:
+                self.predicted_arcs[self.stack[-2].token_id] = [self.stack[-1].token_id, predicted_dep]
             del self.stack[-2]
-        elif "RIGHT" in curr_trans:
+
+        elif curr_trans =="RIGHT":
             self.stack[-2].rc.append(self.stack[-1])
+            if predicted_dep!=None:
+                self.predicted_arcs[self.stack[-1].token_id] = [self.stack[-2].token_id, predicted_dep]
             del self.stack[-1]
+
         else: #SHIFT
             self.stack.append(self.buffer.pop(0))
 
-    def get_features(self):
+
+    def get_features(self):              
+        # • the first three words on the stack and the buffer (and their POS tags) (12 features)
+        # • the words, POS tags, and arc labels of the first and second leftmost and rightmost children
+        #  of the first two words on the stack, (24 features)
+        # • the words, POS tags, and arc labels of leftmost child of the leftmost child and rightmost child
+        # of rightmost child of the first two words of the stack (12 features)
 
         def get_word(token):
             return 'None' if token ==[] else token.word
@@ -142,12 +156,6 @@ class Sentence:
             grandchildren_feats+=[get_tags(item) for get_tags in (get_word, get_pos, get_arc)]
 
         return words_feats + children_feats + grandchildren_feats
-        
-        # • the first three words on the stack and the buffer (and their POS tags) (12 features)
-        # • the words, POS tags, and arc labels of the first and second leftmost and rightmost children
-        #  of the first two words on the stack, (24 features)
-        # • the words, POS tags, and arc labels of leftmost child of the leftmost child and rightmost child
-        # of rightmost child of the first two words of the stack (12 features)
 
 
 class FeatureGenerator:

@@ -81,7 +81,7 @@ dev_labels = torch.from_numpy(dev_pd_labels.apply(lambda x: label_dict[x]).value
 
 embedding_dim = 50
 input_dim = 48*embedding_dim
-hidden_dim = 200
+hidden_dim = 300
 output_dim = 71
 device = 'cpu'
 
@@ -121,7 +121,7 @@ for epoch in range(num_epochs):
 
         iter += 1
 
-        if iter % 1000 == 0:
+        if iter % 3000 == 0:
             acc = (yhats==labels).sum()/labels.size(0)
             outputs = model(dev_data)
 
